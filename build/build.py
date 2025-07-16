@@ -25,6 +25,8 @@ cmd = [
     "../src/main.py",
     "--add-data",
     f"{lib_path}{sep}{target_path}",
+    "--add-data",
+    f"../assets/logo.png{sep}assets",
 ]
 
 print(f"""
@@ -39,12 +41,3 @@ print("""
       Code successfully compiled.
      ==============================
       """)
-
-# Ensure assets/logo.png is included in the build output
-src_logo = os.path.abspath(
-    os.path.join(os.path.dirname(__file__), "..", "assets", "logo.png")
-)
-dest_dir = os.path.join(os.path.dirname(__file__), "dist", "assets")
-os.makedirs(dest_dir, exist_ok=True)
-dest_logo = os.path.join(dest_dir, "logo.png")
-shutil.copy2(src_logo, dest_logo)

@@ -1,7 +1,6 @@
 from PySide6.QtWidgets import QMainWindow, QStackedWidget
 from PySide6.QtCore import QTimer
 from .login_page import LoginPage
-from .loading_page import LoadingPage
 from .main_window import MainWindow
 
 
@@ -13,20 +12,15 @@ class PageManager(QMainWindow):
         self.stack = QStackedWidget()
         self.setCentralWidget(self.stack)
         self.login_page = LoginPage(self)
-        self.loading_page = LoadingPage(self)
         self.main_window = MainWindow(self)
         self.stack.addWidget(self.login_page)
-        self.stack.addWidget(self.loading_page)
         self.stack.addWidget(self.main_window)
         self.stack.setCurrentWidget(self.login_page)
-
-    def show_loading(self):
-        self.stack.setCurrentWidget(self.loading_page)
-        QTimer.singleShot(2000, self.show_main)
 
     def show_main(self):
         # Reload token cache to ensure latest token is available
         from .main_window import load_cache
+
         load_cache()  # This ensures the cache is loaded before main window is used
         self.stack.setCurrentWidget(self.main_window)
 
