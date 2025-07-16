@@ -16,6 +16,7 @@ from PySide6.QtWidgets import (
     QProgressBar,
     QMenu,
     QMessageBox,
+    QTableView,
 )
 from PySide6.QtCore import (
     Qt,
@@ -26,6 +27,8 @@ from PySide6.QtCore import (
     Signal,
     QObject,
     Slot,
+    QAbstractTableModel,
+    QModelIndex,
 )
 from PySide6.QtGui import QPixmap, QFont
 import os
@@ -229,6 +232,51 @@ class FileListItemWidget(QWidget):
         self.setStyleSheet("background: transparent;")
 
 
+class PandasTableModel(QAbstractTableModel):
+    def __init__(self, df, chunk_size=100):
+        super().__init__()
+        self._df = df
+        self._chunk_size = chunk_size
+        self._loaded_rows = min(chunk_size, len(df))
+
+    def rowCount(self, parent=None):
+        return self._loaded_rows
+
+    def columnCount(self, parent=None):
+        return len(self._df.columns)
+
+    def data(self, index, role=Qt.DisplayRole):
+        if not index.isValid():
+            return None
+        if role == Qt.DisplayRole:
+            value = self._df.iat[index.row(), index.column()]
+            return str(value)
+        return None
+
+    def headerData(self, section, orientation, role=Qt.DisplayRole):
+        if role != Qt.DisplayRole:
+            return None
+        if orientation == Qt.Horizontal:
+            return str(self._df.columns[section])
+        else:
+            return str(self._df.index[section])
+
+    def canFetchMore(self, parent=None):
+        return self._loaded_rows < len(self._df)
+
+    def fetchMore(self, parent=None):
+        remaining = len(self._df) - self._loaded_rows
+        items_to_fetch = min(self._chunk_size, remaining)
+        if items_to_fetch > 0:
+            self.beginInsertRows(
+                parent or QModelIndex(),
+                self._loaded_rows,
+                self._loaded_rows + items_to_fetch - 1,
+            )
+            self._loaded_rows += items_to_fetch
+            self.endInsertRows()
+
+
 class MainWindow(QWidget):
     def __init__(self, manager):
         super().__init__()
@@ -335,7 +383,38 @@ class MainWindow(QWidget):
 
         self.file_list = QListWidget()
         self.file_list.setStyleSheet(
-            "QListWidget { background: #fff; border-radius: 18px; border: 1.5px solid #e5e7eb; }"
+            """
+            QListWidget { background: #fff; border-radius: 18px; border: 1.5px solid #e5e7eb; }
+            QScrollBar:vertical {
+                background: #f5f6fa;
+                width: 14px;
+                margin: 0px 0px 0px 0px;
+                border-radius: 7px;
+            }
+            QScrollBar::handle:vertical {
+                background: #FF4B2B;
+                min-height: 30px;
+                border-radius: 7px;
+            }
+            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
+                height: 0px;
+            }
+            QScrollBar:horizontal {
+                background: #f5f6fa;
+                height: 14px;
+                margin: 0px 0px 0px 0px;
+                border-radius: 7px;
+            }
+            QScrollBar::handle:horizontal {
+                background: #1976d2;
+                min-width: 30px;
+                border-radius: 7px;
+                border: 2px solid #FF4B2B;
+            }
+            QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {
+                width: 0px;
+            }
+            """
         )
         self.file_list.setMinimumSize(800, 500)
         self.file_list.itemClicked.connect(self._on_item_clicked)
@@ -431,19 +510,75 @@ class MainWindow(QWidget):
             return
         dlg = QDialog(self)
         dlg.setWindowTitle(f"Preview: {data['name']}")
-        dlg.setMinimumSize(700, 500)
+        dlg.setMinimumSize(900, 600)
         vb = QVBoxLayout(dlg)
         lbl = QLabel(f"<b>Preview: {data['name']}</b>")
         vb.addWidget(lbl)
         prog = QProgressBar()
         prog.setRange(0, 0)
         vb.addWidget(prog)
-        table = QTableWidget()
-        table.setVisible(False)
-        vb.addWidget(table, 1)
+        table_view = QTableView()
+        table_view.setVisible(False)
+        table_view.setHorizontalScrollMode(QTableView.ScrollPerPixel)
+        table_view.setVerticalScrollMode(QTableView.ScrollPerPixel)
+        table_view.setSelectionBehavior(QTableView.SelectRows)
+        table_view.setSelectionMode(QTableView.SingleSelection)
+        table_view.setAlternatingRowColors(True)
+        # Custom scrollbar style
+        scrollbar_style = """
+            QScrollBar:vertical {
+                background: #f5f6fa;
+                width: 14px;
+                margin: 0px 0px 0px 0px;
+                border-radius: 7px;
+            }
+            QScrollBar::handle:vertical {
+                background: #FF4B2B;
+                min-height: 30px;
+                border-radius: 7px;
+            }
+            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
+                height: 0px;
+            }
+            QScrollBar:horizontal {
+                background: #f5f6fa;
+                height: 14px;
+                margin: 0px 0px 0px 0px;
+                border-radius: 7px;
+            }
+            QScrollBar::handle:horizontal {
+                background: #1976d2;
+                min-width: 30px;
+                border-radius: 7px;
+                border: 2px solid #FF4B2B;
+            }
+            QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {
+                width: 0px;
+            }
+        """
+        table_view.setStyleSheet(scrollbar_style)
+        dlg.setStyleSheet(scrollbar_style)
+        table_view.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
+        table_view.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        vb.addWidget(table_view, 1)
+        btn_row = QHBoxLayout()
         back = QPushButton("Back")
         back.clicked.connect(dlg.close)
-        vb.addWidget(back)
+        btn_row.addWidget(back)
+        maximize_btn = QPushButton("Maximize")
+        maximize_btn.setCheckable(True)
+        btn_row.addWidget(maximize_btn)
+        vb.addLayout(btn_row)
+
+        def toggle_maximize():
+            if maximize_btn.isChecked():
+                dlg.showMaximized()
+                maximize_btn.setText("Restore")
+            else:
+                dlg.showNormal()
+                maximize_btn.setText("Maximize")
+
+        maximize_btn.clicked.connect(toggle_maximize)
 
         def fetch():
             try:
@@ -451,18 +586,28 @@ class MainWindow(QWidget):
                 url = f"https://graph.microsoft.com/v1.0/me/drive/items/{data['id']}/content"
                 resp = requests.get(url, headers=client.headers)
                 resp.raise_for_status()
-                df = pd.read_excel(io.BytesIO(resp.content), engine="openpyxl").iloc[
-                    :10, :10
-                ]
-                table.setRowCount(df.shape[0])
-                table.setColumnCount(df.shape[1])
-                table.setHorizontalHeaderLabels([str(c) for c in df.columns])
-                for i in range(df.shape[0]):
-                    for j in range(df.shape[1]):
-                        table.setItem(i, j, QTableWidgetItem(str(df.iat[i, j])))
-                table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-                table.setVisible(True)
+                df = pd.read_excel(io.BytesIO(resp.content), engine="openpyxl")
+                model = PandasTableModel(df, chunk_size=100)
+                table_view.setModel(model)
+                table_view.horizontalHeader().setSectionResizeMode(
+                    QHeaderView.Interactive
+                )
+                table_view.resizeColumnsToContents()
+                table_view.setVisible(True)
                 prog.setVisible(False)
+
+                # Infinite loading: connect to scroll event
+                def on_scroll():
+                    if (
+                        model.canFetchMore()
+                        and table_view.verticalScrollBar().value()
+                        == table_view.verticalScrollBar().maximum()
+                    ):
+                        model.fetchMore()
+
+                table_view.verticalScrollBar().valueChanged.connect(
+                    lambda _: on_scroll()
+                )
             except Exception as ex:
                 lbl.setText(f"<span style='color:red'>Error: {ex}</span>")
                 prog.setVisible(False)
