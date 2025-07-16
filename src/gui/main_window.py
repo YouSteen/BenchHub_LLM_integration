@@ -540,6 +540,14 @@ class MainWindow(QWidget):
                 selection-background-color: #FF4B2B;
                 selection-color: white;
             }
+            QTableView::item:selected {
+                background-color: #FF4B2B;
+                color: white;
+            }
+            QTableView::item:focus {
+                border: 1px solid #FF4B2B;
+                outline: none;
+            }
             """
         )
         self.file_list.setMinimumSize(800, 500)
@@ -704,13 +712,25 @@ class MainWindow(QWidget):
                 border-radius: 7px;
             }
             QScrollBar::handle:horizontal {
-                background: #1976d2;
+                background: #FF4B2B;
                 min-width: 30px;
                 border-radius: 7px;
                 border: 2px solid #FF4B2B;
             }
             QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {
                 width: 0px;
+            }
+            QTableView {
+                selection-background-color: #FF4B2B;
+                selection-color: white;
+            }
+            QTableView::item:selected {
+                background-color: #FF4B2B;
+                color: white;
+            }
+            QTableView::item:focus {
+                border: 1px solid #FF4B2B;
+                outline: none;
             }
         """
         table_view.setStyleSheet(scrollbar_style)
