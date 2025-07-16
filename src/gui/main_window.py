@@ -17,6 +17,8 @@ from PySide6.QtWidgets import (
     QMenu,
     QMessageBox,
     QTableView,
+    QSplitter,
+    QTextEdit,
 )
 from PySide6.QtCore import (
     Qt,
@@ -217,13 +219,23 @@ class FileListItemWidget(QWidget):
             "font-size: 28px; margin-right: 10px; background: transparent;"
         )
         layout.addWidget(icon)
-        # File name
-        label = QLabel(item_data.get("name", "Unnamed"))
+        # File name and creator
+        name = item_data.get("name", "Unnamed")
+        creator = "Unknown"
+        created_by = item_data.get("createdBy", {})
+        if isinstance(created_by, dict):
+            user = created_by.get("user", {})
+            if isinstance(user, dict):
+                creator = user.get("displayName") or user.get("email") or "Unknown"
+        label = QLabel(
+            f"{name} <span style='color:#888;font-size:13px;'>(created by: {creator})</span>"
+        )
         label.setStyleSheet(
             "font-size: 18px; font-family: 'Segoe UI', Arial, sans-serif; background: transparent;"
         )
+        label.setTextFormat(Qt.RichText)
         layout.addWidget(label, 1)
-        # Action buttons for .xlsx files
+        # Only add preview button for .xlsx files
         if "folder" not in item_data and item_data.get("name", "").lower().endswith(
             ".xlsx"
         ):
@@ -236,18 +248,8 @@ class FileListItemWidget(QWidget):
             preview_btn.setToolTip("Preview file")
             preview_btn.clicked.connect(lambda _, d=item_data: preview_callback(d))
             layout.addWidget(preview_btn)
-            email_btn = ActionButton(
-                " Send email with recommendations ",
-                "border: none; font-size: 16px; color: #fff; background: #FF4B2B; border-radius: 8px; padding: 0 18px; font-weight: 500;",
-                "border: none; font-size: 16px; color: #fff; background: #ff7b5a; border-radius: 8px; padding: 0 18px; font-weight: 500;",
-            )
-            email_btn.setFixedSize(260, 44)
-            email_btn.setToolTip(" Send email with recommendations ")
-            email_btn.clicked.connect(lambda _, d=item_data: recommend_callback(d))
-            layout.addWidget(email_btn)
         else:
             layout.addSpacing(160)
-            layout.addSpacing(260)
         layout.addStretch(0)
         self.setStyleSheet("background: transparent;")
 
@@ -298,6 +300,16 @@ class PandasTableModel(QAbstractTableModel):
 
 
 class MainWindow(QWidget):
+    def _sidebar_btn_style(self, active=False):
+        base = "padding: 16px; font-size: 16px; border: none; text-align: left; border-radius: 0 18px 18px 0; background: transparent; color: #222; font-family: 'Segoe UI', Arial, sans-serif;"
+        active_bg = (
+            "background: #FF4B2B; color: #fff; font-weight: 600;" if active else ""
+        )
+        # Orange hover for all, white text on hover
+        hover = "QPushButton:hover { background: #FF4B2B; color: #fff; }"
+        active_hover = "QPushButton:checked, QPushButton:pressed { background: #FF4B2B; color: #fff; }"
+        return f"{base}{active_bg}{hover}{active_hover}"
+
     def __init__(self, manager):
         super().__init__()
         self.manager = manager
@@ -305,14 +317,87 @@ class MainWindow(QWidget):
         self._fade_in()
         self._current_folder_id = None
 
-        root_layout = QVBoxLayout(self)
-        root_layout.setContentsMargins(0, 0, 0, 0)
-        root_layout.setSpacing(0)
+        # Main vertical layout: top bar, then horizontal split
+        main_vlayout = QVBoxLayout(self)
+        main_vlayout.setContentsMargins(0, 0, 0, 0)
+        main_vlayout.setSpacing(0)
 
-        root_layout.addWidget(self._create_titlebar())
-        self.stack = AnimatedStackedWidget()
-        self.stack.addWidget(self._create_onedrive_page())
-        root_layout.addWidget(self.stack, 1)
+        # Top bar (titlebar) spans full width
+        self._titlebar = self._create_titlebar()
+        main_vlayout.addWidget(self._titlebar)
+
+        # Horizontal layout: sidebar + content
+        main_hlayout = QHBoxLayout()
+        main_hlayout.setContentsMargins(0, 0, 0, 0)
+        main_hlayout.setSpacing(0)
+
+        # Sidebar
+        sidebar = QFrame()
+        sidebar.setObjectName("sidebar")
+        sidebar.setFixedWidth(180)
+        sidebar.setStyleSheet("background: #fff; border-right: 1px solid #e5e7eb;")
+        sb_layout = QVBoxLayout(sidebar)
+        sb_layout.setContentsMargins(0, 0, 0, 0)
+        sb_layout.setSpacing(0)
+        # Sidebar title
+        sb_title = QLabel("Navigation")
+        sb_title.setStyleSheet(
+            "font-size: 18px; font-weight: bold; color: #FF4B2B; padding: 24px 0 12px 24px;"
+        )
+        sb_layout.addWidget(sb_title)
+        self.btn_main = QPushButton("Main")
+        self.btn_main.setCheckable(True)
+        self.btn_main.setChecked(True)
+        self.btn_main.setCursor(Qt.PointingHandCursor)
+        self.btn_main.setStyleSheet(self._sidebar_btn_style(active=True))
+        self.btn_logs = QPushButton("Logs")
+        self.btn_logs.setCheckable(True)
+        self.btn_logs.setCursor(Qt.PointingHandCursor)
+        self.btn_logs.setStyleSheet(self._sidebar_btn_style(active=False))
+        sb_layout.addWidget(self.btn_main)
+        sb_layout.addWidget(self.btn_logs)
+        sb_layout.addStretch(1)
+        main_hlayout.addWidget(sidebar)
+
+        # Stacked content area
+        self.stack = QStackedWidget()
+        # Main file list page
+        self.main_page = QWidget()
+        main_page_layout = QVBoxLayout(self.main_page)
+        main_page_layout.setContentsMargins(0, 0, 0, 0)
+        main_page_layout.setSpacing(0)
+        # Remove titlebar from here
+        self.file_stack = AnimatedStackedWidget()
+        self.file_stack.addWidget(self._create_onedrive_page())
+        main_page_layout.addWidget(self.file_stack, 1)
+        self.stack.addWidget(self.main_page)
+        # Logs page
+        self.logs_page = QWidget()
+        logs_layout = QVBoxLayout(self.logs_page)
+        logs_layout.setContentsMargins(24, 24, 24, 24)
+        logs_layout.setSpacing(0)
+        logs_label = QLabel("<b>Logs</b>")
+        logs_label.setFont(QFont("Segoe UI", 18, QFont.Bold))
+        logs_layout.addWidget(logs_label)
+        self.logs_text = QTextEdit()
+        self.logs_text.setReadOnly(True)
+        self.logs_text.setStyleSheet(
+            "background: #f7f8fa; border-radius: 8px; font-size: 14px;"
+        )
+        self.logs_text.setText(
+            "[INFO] App started\n[INFO] Ready for user actions\n[MOCK] This is a mock log entry."
+        )
+        logs_layout.addWidget(self.logs_text, 1)
+        self.stack.addWidget(self.logs_page)
+        main_hlayout.addWidget(self.stack, 1)
+
+        main_vlayout.addLayout(main_hlayout, 1)
+
+        # Sidebar button logic
+        self.btn_main.clicked.connect(self._show_main_page)
+        self.btn_logs.clicked.connect(self._show_logs_page)
+        self.btn_main.installEventFilter(self)
+        self.btn_logs.installEventFilter(self)
 
     def _fade_in(self):
         anim = QPropertyAnimation(self, b"windowOpacity")
@@ -358,12 +443,14 @@ class MainWindow(QWidget):
         icon.setFont(QFont("Segoe UI Emoji", 18))
         icon.setStyleSheet("color: #888;")
         sf_layout.addWidget(icon)
-        search = QLineEdit()
-        search.setPlaceholderText("Search")
-        search.setFont(QFont("Segoe UI", 15))
-        search.setStyleSheet("border: none; background: transparent; padding: 8px;")
-        search.setMinimumWidth(340)
-        sf_layout.addWidget(search)
+        self.search = QLineEdit()
+        self.search.setPlaceholderText("Search")
+        self.search.setFont(QFont("Segoe UI", 15))
+        self.search.setStyleSheet(
+            "border: none; background: transparent; padding: 8px;"
+        )
+        self.search.setMinimumWidth(340)
+        sf_layout.addWidget(self.search)
         search_frame.setFixedHeight(44)
         layout.addWidget(search_frame)
 
@@ -376,6 +463,9 @@ class MainWindow(QWidget):
             layout.addWidget(lbl)
             layout.addSpacing(16)
 
+        # Connect search bar to filter
+        self.search.textChanged.connect(self._filter_files)
+
         return bar
 
     def _create_onedrive_page(self):
@@ -384,7 +474,7 @@ class MainWindow(QWidget):
         v.setContentsMargins(64, 48, 64, 48)
         v.setSpacing(24)
 
-        # Title and refresh button row
+        # Title and refresh/email button row
         title_row = QHBoxLayout()
         title = QLabel("<b>BenchHub Drive</b>")
         title.setFont(QFont("Segoe UI", 22, QFont.Bold))
@@ -395,10 +485,22 @@ class MainWindow(QWidget):
             "border: none; font-size: 18px; color: #fff; background: #FF4B2B; border-radius: 8px; font-weight: 700;",
             "border: none; font-size: 18px; color: #fff; background: #ff7b5a; border-radius: 8px; font-weight: 700;",
         )
-        self.refresh_btn.setFixedSize(140, 44)
+        self.refresh_btn.setFixedSize(160, 44)
         self.refresh_btn.setToolTip("Refresh file list")
         self.refresh_btn.clicked.connect(self._refresh_files)
         title_row.addWidget(self.refresh_btn)
+        # Add the new 'Send email with recommendation' button
+        self.email_all_btn = ActionButton(
+            "✉️ Send email with recommendation",
+            "border: none; font-size: 16px; color: #fff; background: #FF4B2B; border-radius: 8px; padding: 0 28px; font-weight: 700;",
+            "border: none; font-size: 16px; color: #fff; background: #ff7b5a; border-radius: 8px; padding: 0 28px; font-weight: 700;",
+        )
+        self.email_all_btn.setMinimumWidth(280)
+        self.email_all_btn.setFixedHeight(44)
+        self.email_all_btn.setToolTip("Send email with recommendations for all files")
+        self.email_all_btn.clicked.connect(self._send_email_all)
+        title_row.addSpacing(18)
+        title_row.addWidget(self.email_all_btn)
         v.addLayout(title_row)
 
         self.file_list = QListWidget()
@@ -450,6 +552,7 @@ class MainWindow(QWidget):
         )
 
     def _show_folder(self, folder_id=None, drive_id=None, force_refresh=False):
+        self._all_files = []  # Store all files for filtering
         self.file_list.clear()
         self.refresh_btn.setText("\u27f3 Loading...")
         self.refresh_btn.setEnabled(False)
@@ -487,6 +590,7 @@ class MainWindow(QWidget):
         self.refresh_btn.setText("\u27f3 Refresh")
         self.refresh_btn.setEnabled(True)
         self.file_list.clear()
+        self._all_files = files or []  # Save for filtering
         if err:
             self.file_list.addItem(QListWidgetItem(f"Error: {err}"))
             return
@@ -495,23 +599,46 @@ class MainWindow(QWidget):
             up = QListWidgetItem(".. (Up)")
             up.setData(Qt.UserRole, {"up": True})
             self.file_list.addItem(up)
-        for f in files:
+        self._filter_files()  # Show filtered files (or all if no filter)
+
+    def _filter_files(self):
+        # Remove all items except the up-item (if present)
+        up_item = None
+        if self.file_list.count() > 0:
+            first_item = self.file_list.item(0)
+            if first_item.data(Qt.UserRole) and first_item.data(Qt.UserRole).get("up"):
+                up_item = first_item
+        self.file_list.clear()
+        if up_item:
+            self.file_list.addItem(up_item)
+        query = self.search.text().strip().lower() if hasattr(self, "search") else ""
+        for f in self._all_files:
             name = f.get("name", "").lower()
+            creator = ""
+            created_by = f.get("createdBy", {})
+            if isinstance(created_by, dict):
+                user = created_by.get("user", {})
+                if isinstance(user, dict):
+                    creator = (
+                        user.get("displayName") or user.get("email") or ""
+                    ).lower()
+            # Only show folders and .xlsx files (as before)
             if "folder" in f or name.endswith(".xlsx"):
-                item = QListWidgetItem()
-                item.setData(Qt.UserRole, f)
-                self.file_list.addItem(item)
-                widget = FileListItemWidget(
-                    f,
-                    preview_callback=self._on_preview,
-                    recommend_callback=lambda data: QMessageBox.information(
-                        self,
-                        "Send recommendations",
-                        f"Send recommendations for: {data['name']}",
-                    ),
-                )
-                self.file_list.setItemWidget(item, widget)
-                item.setSizeHint(widget.sizeHint())
+                if not query or query in name or query in creator:
+                    item = QListWidgetItem()
+                    item.setData(Qt.UserRole, f)
+                    self.file_list.addItem(item)
+                    widget = FileListItemWidget(
+                        f,
+                        preview_callback=self._on_preview,
+                        recommend_callback=lambda data: QMessageBox.information(
+                            self,
+                            "Send recommendations",
+                            f"Send recommendations for: {data['name']}",
+                        ),
+                    )
+                    self.file_list.setItemWidget(item, widget)
+                    item.setSizeHint(widget.sizeHint())
 
     def _on_item_clicked(self, list_item):
         data = list_item.data(Qt.UserRole) or {}
@@ -522,7 +649,9 @@ class MainWindow(QWidget):
                 self._show_folder(prev_id, prev_drive_id)
         elif "folder" in data:
             folder_id = data["id"]
-            drive_id = data.get("parentReference", {}).get("driveId") or self._current_drive_id
+            drive_id = (
+                data.get("parentReference", {}).get("driveId") or self._current_drive_id
+            )
             self._nav_stack.append((folder_id, drive_id, data["name"]))
             self._show_folder(folder_id, drive_id)
 
@@ -638,3 +767,41 @@ class MainWindow(QWidget):
 
         QTimer.singleShot(100, fetch)
         dlg.exec()
+
+    def _send_email_all(self):
+        # Mock sending email for all .xlsx files in the current list
+        files = []
+        for i in range(self.file_list.count()):
+            item = self.file_list.item(i)
+            data = item.data(Qt.UserRole)
+            if (
+                data
+                and isinstance(data, dict)
+                and "folder" not in data
+                and data.get("name", "").lower().endswith(".xlsx")
+            ):
+                files.append(data["name"])
+        if files:
+            QMessageBox.information(
+                self,
+                "Mock Email",
+                f"Would send recommendations for:\n\n" + "\n".join(files),
+            )
+        else:
+            QMessageBox.information(
+                self, "Mock Email", "No .xlsx files to send recommendations for."
+            )
+
+    def _show_main_page(self):
+        self.btn_main.setChecked(True)
+        self.btn_logs.setChecked(False)
+        self.btn_main.setStyleSheet(self._sidebar_btn_style(active=True))
+        self.btn_logs.setStyleSheet(self._sidebar_btn_style(active=False))
+        self.stack.setCurrentWidget(self.main_page)
+
+    def _show_logs_page(self):
+        self.btn_main.setChecked(False)
+        self.btn_logs.setChecked(True)
+        self.btn_main.setStyleSheet(self._sidebar_btn_style(active=False))
+        self.btn_logs.setStyleSheet(self._sidebar_btn_style(active=True))
+        self.stack.setCurrentWidget(self.logs_page)
