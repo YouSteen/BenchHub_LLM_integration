@@ -736,7 +736,14 @@ class MainWindow(QWidget):
         def fetch():
             try:
                 client = GraphAPIClient()
-                url = f"https://graph.microsoft.com/v1.0/me/drive/items/{data['id']}/content"
+                # Use /drives/{drive_id}/items/{id}/content for shared files, /me/drive/items/{id}/content for personal
+                drive_id = data.get("parentReference", {}).get("driveId") or data.get(
+                    "driveId"
+                )
+                if drive_id:
+                    url = f"https://graph.microsoft.com/v1.0/drives/{drive_id}/items/{data['id']}/content"
+                else:
+                    url = f"https://graph.microsoft.com/v1.0/me/drive/items/{data['id']}/content"
                 resp = requests.get(url, headers=client.headers)
                 resp.raise_for_status()
                 df = pd.read_excel(io.BytesIO(resp.content), engine="openpyxl")
