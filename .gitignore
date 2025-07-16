@@ -1,0 +1,37 @@
+ 
+__pycache__/
+*.py[cod]
+*$py.class
+ 
+venv/
+ENV/
+env/
+.venv/
+models/* 
+build/dist
+build/build
+*.spec
+ 
+*.exe
+*.manifest
+*.dll
+*.pkg
+*.app
+ 
+*.log
+*.tmp
+*.temp
+
+# OS-specific
+.DS_Store
+Thumbs.db
+
+# IDEs/editors
+.vscode/
+.idea/
+
+# Token or credential files
+token_cache.json
+
+# Custom lib data (if llama_cpp is downloaded into site-packages)
+llama_cpp/
