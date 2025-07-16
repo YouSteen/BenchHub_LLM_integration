@@ -25,6 +25,9 @@ class PageManager(QMainWindow):
         QTimer.singleShot(2000, self.show_main)
 
     def show_main(self):
+        # Reload token cache to ensure latest token is available
+        from .main_window import load_cache
+        load_cache()  # This ensures the cache is loaded before main window is used
         self.stack.setCurrentWidget(self.main_window)
 
     def show_login(self):

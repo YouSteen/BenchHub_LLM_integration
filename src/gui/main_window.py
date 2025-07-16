@@ -118,6 +118,7 @@ class GraphAPIClient:
         self.headers = {"Authorization": f"Bearer {token}"}
 
     def find_folder_by_name(self, name, parent_id=None):
+        # First, search in the specified parent or root
         url = (
             f"{self.BASE_URL}/me/drive/items/{parent_id}/children"
             if parent_id
@@ -127,15 +128,33 @@ class GraphAPIClient:
         resp.raise_for_status()
         for item in resp.json().get("value", []):
             if item.get("name") == name and "folder" in item:
-                return item
+                # Personal folder: return with driveId=None
+                return {**item, "driveId": None}
+        # If not found and searching root, also check sharedWithMe
+        if parent_id is None:
+            shared_url = f"{self.BASE_URL}/me/drive/sharedWithMe"
+            shared_resp = requests.get(shared_url, headers=self.headers)
+            shared_resp.raise_for_status()
+            for shared_item in shared_resp.json().get("value", []):
+                remote = shared_item.get("remoteItem", {})
+                if remote.get("name") == name and "folder" in remote:
+                    # Shared folder: return with driveId and id from remoteItem
+                    return {
+                        **remote,
+                        "id": remote.get("id"),
+                        "name": remote.get("name"),
+                        "folder": remote.get("folder"),
+                        "driveId": remote.get("parentReference", {}).get("driveId"),
+                    }
         return None
 
-    def list_onedrive_files(self, folder_id=None):
-        url = (
-            f"{self.BASE_URL}/me/drive/items/{folder_id}/children"
-            if folder_id
-            else f"{self.BASE_URL}/me/drive/root/children"
-        )
+    def list_onedrive_files(self, folder_id=None, drive_id=None):
+        if drive_id:
+            url = f"{self.BASE_URL}/drives/{drive_id}/items/{folder_id}/children"
+        elif folder_id:
+            url = f"{self.BASE_URL}/me/drive/items/{folder_id}/children"
+        else:
+            url = f"{self.BASE_URL}/me/drive/root/children"
         resp = requests.get(url, headers=self.headers)
         resp.raise_for_status()
         return resp.json().get("value", [])
@@ -145,10 +164,11 @@ class FileLoaderWorker(QObject):
     finished = Signal(list, object)
     error = Signal(str)
 
-    def __init__(self, client, folder_id):
+    def __init__(self, client, folder_id, drive_id=None):
         super().__init__()
         self.client = client
         self.folder_id = folder_id
+        self.drive_id = drive_id
 
     def run(self):
         print(
@@ -156,7 +176,7 @@ class FileLoaderWorker(QObject):
             threading.current_thread().name,
         )
         try:
-            files = self.client.list_onedrive_files(self.folder_id)
+            files = self.client.list_onedrive_files(self.folder_id, self.drive_id)
             self.finished.emit(files, None)
         except Exception as e:
             self.finished.emit([], e)
@@ -429,7 +449,7 @@ class MainWindow(QWidget):
             self._nav_stack[-1][0] if self._nav_stack else None, force_refresh=True
         )
 
-    def _show_folder(self, folder_id=None, force_refresh=False):
+    def _show_folder(self, folder_id=None, drive_id=None, force_refresh=False):
         self.file_list.clear()
         self.refresh_btn.setText("\u27f3 Loading...")
         self.refresh_btn.setEnabled(False)
@@ -442,11 +462,13 @@ class MainWindow(QWidget):
                 self.refresh_btn.setEnabled(True)
                 return
             folder_id = root["id"]
-            self._nav_stack = [(folder_id, "BenchHub")]
+            drive_id = root.get("driveId")
+            self._nav_stack = [(folder_id, drive_id, "BenchHub")]
         self._current_folder_id = folder_id
+        self._current_drive_id = drive_id
         # Use a worker thread for loading
         self._file_loader_thread = QThread()
-        self._file_loader_worker = FileLoaderWorker(client, folder_id)
+        self._file_loader_worker = FileLoaderWorker(client, folder_id, drive_id)
         self._file_loader_worker.moveToThread(self._file_loader_thread)
         self._file_loader_thread.started.connect(self._file_loader_worker.run)
         self._file_loader_worker.finished.connect(self._on_files_loaded)
@@ -496,11 +518,13 @@ class MainWindow(QWidget):
         if data.get("up"):
             if len(self._nav_stack) > 1:
                 self._nav_stack.pop()
-                prev_id, _ = self._nav_stack[-1]
-                self._show_folder(prev_id)
+                prev_id, prev_drive_id, _ = self._nav_stack[-1]
+                self._show_folder(prev_id, prev_drive_id)
         elif "folder" in data:
-            self._nav_stack.append((data["id"], data["name"]))
-            self._show_folder(data["id"])
+            folder_id = data["id"]
+            drive_id = data.get("parentReference", {}).get("driveId") or self._current_drive_id
+            self._nav_stack.append((folder_id, drive_id, data["name"]))
+            self._show_folder(folder_id, drive_id)
 
     def _on_preview(self, data):
         if "folder" in data or not data.get("name", "").lower().endswith(".xlsx"):
