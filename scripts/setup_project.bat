@@ -1,8 +1,5 @@
 @echo off
-echo Cloning BenchHub LLM Integration...
-git clone https://github.com/YouSteen/BenchHub_LLM_integration.git
-
-cd BenchHub_LLM_integration
+cd ..
 
 echo Creating virtual environment...
 py -m venv venv
