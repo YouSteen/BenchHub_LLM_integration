@@ -8,7 +8,7 @@ echo Activating virtual environment...
 call venv\Scripts\activate
 
 echo Installing requirements...
-pip install -r requirements.txt
+py -m pip install -r requirements.txt
 
 echo.
 echo ✅ Setup complete. You can now run your app.
