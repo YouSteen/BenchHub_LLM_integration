@@ -462,7 +462,8 @@ class MainWindow(QWidget):
             lbl.setFont(QFont("Segoe UI Emoji", 38))
             layout.addWidget(lbl)
             layout.addSpacing(16)
-
+            if emoji == "🛠️":
+                lbl.mousePressEvent = lambda e, self=self: self._show_support_modal()
         # Connect search bar to filter
         self.search.textChanged.connect(self._filter_files)
 
@@ -836,3 +837,32 @@ class MainWindow(QWidget):
         self.btn_main.setStyleSheet(self._sidebar_btn_style(active=False))
         self.btn_logs.setStyleSheet(self._sidebar_btn_style(active=True))
         self.stack.setCurrentWidget(self.logs_page)
+
+    def _show_support_modal(self):
+        dlg = QDialog(self)
+        dlg.setWindowTitle("Contact Support")
+        dlg.setMinimumSize(440, 260)
+        layout = QVBoxLayout(dlg)
+        title = QLabel("<b>Contact Support</b>")
+        title.setTextFormat(Qt.RichText)
+        title.setStyleSheet("font-size: 18px; padding-bottom: 8px;")
+        layout.addWidget(title)
+        contacts = [
+            ("Nicola-Diana Sincaru", "nicola-diana.sincaru@endava.com"),
+            ("Andrei Vataselu", "andrei.vataselu@endava.com"),
+            ("Iustin-Mihai Stanciu", "iustin-mihai.stanciu@endava.com"),
+        ]
+        for name, email in contacts:
+            name_label = QLabel(f"<b>{name}</b>")
+            name_label.setTextFormat(Qt.RichText)
+            name_label.setStyleSheet("font-size: 15px; margin-top: 10px;")
+            layout.addWidget(name_label)
+            email_label = QLabel(email)
+            email_label.setTextInteractionFlags(Qt.TextSelectableByMouse)
+            email_label.setStyleSheet("font-size: 14px; color: #444; margin-bottom: 4px; margin-left: 12px;")
+            layout.addWidget(email_label)
+        layout.addSpacing(8)
+        btn = QPushButton("Close")
+        btn.clicked.connect(dlg.accept)
+        layout.addWidget(btn, alignment=Qt.AlignRight)
+        dlg.exec()
