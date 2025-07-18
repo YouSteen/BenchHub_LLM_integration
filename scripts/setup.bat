@@ -1,4 +1,7 @@
 @echo off
+echo Navigating to project root...
+cd ..
+
 echo Creating virtual environment...
 py -m venv venv
 
