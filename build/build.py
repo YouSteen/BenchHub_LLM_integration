@@ -19,7 +19,6 @@ cmd = [
     "--onefile",
     "--clean",
     "--log-level=WARN",
-    "--noconsole",
     f"--distpath=..",
     f"--workpath=build/temp",
     "../src/main.py",
