@@ -1,15 +1,18 @@
 import os
-import shutil
 import pandas as pd
 import win32com.client as win32
-from openpyxl import load_workbook
 
 from menu.options.send_emails.llm_integration.run import generate_llm_outputs
 from menu.utils.config_manager import get_survey_path, get_llm_path
 from menu.options.send_emails.llm_integration.survey_parser import find_column
+from menu.options.send_emails.llm_integration.sent_log import (
+    load_sent_log,
+    append_to_sent_log
+)
 
 # === CONFIG ===
 subject = "Your Development Plan – Personalized Suggestions"
+LOG_PATH = "C:\\Users\\iustanciu\\OneDrive - ENDAVA\\Survey\\sent_log.xlsx"
 
 EMAIL_TEMPLATE = """
 <html>
@@ -23,7 +26,6 @@ EMAIL_TEMPLATE = """
 </html>
 """
 
-
 def send_email_outlook(to: str, cc: str, subject: str, html_body: str):
     outlook = win32.Dispatch("Outlook.Application")
     mail = outlook.CreateItem(0)
@@ -32,7 +34,6 @@ def send_email_outlook(to: str, cc: str, subject: str, html_body: str):
     mail.Subject = subject
     mail.HTMLBody = html_body
     mail.Send()
-
 
 def send_all_emails():
     survey_path = get_survey_path()
@@ -53,24 +54,8 @@ def send_all_emails():
         input("Press Enter to return to the menu...")
         return
 
-    temp_survey_path = "temp_survey.xlsx"
     try:
-        shutil.copy(survey_path, temp_survey_path)
-    except (FileNotFoundError, PermissionError):
-        print(
-            "\nPermission denied or file not found. Please check the survey path and ensure the file is not open elsewhere."
-        )
-        input("Press Enter to return to the menu...")
-        return
-    except Exception as e:
-        print(f"\nError copying survey file: {e}")
-        input("Press Enter to return to the menu...")
-        return
-
-    try:
-        df = pd.read_excel(temp_survey_path)
-        wb = load_workbook(temp_survey_path)
-        ws = wb.active
+        df = pd.read_excel(survey_path)
 
         required_keywords = [
             "upskilling",
@@ -78,40 +63,45 @@ def send_all_emails():
             "next period",
             "email",
             "name",
-            "send email",
             "career coach",
+            "id"
         ]
         for keyword in required_keywords:
             find_column(df, keyword)
 
-        if ws is None:
-            raise ValueError("No active worksheet found in the Excel file.")
-
-        col_send = find_column(df, "send email")
-        col_email = find_column(df, "email")
+        col_id = find_column(df, "id")
+        sent_ids = load_sent_log(LOG_PATH)
         responses = generate_llm_outputs(df)
 
+        if not responses:
+            print("All entries are already processed. No emails were sent.")
+            input("Press Enter to return to the menu...")
+            return
+
         for entry in responses:
-            html = EMAIL_TEMPLATE.format(
-                name=entry["name"], generated_section=entry["llm_output"]
-            )
-            print(
-                f"Sending to {entry['name']} <{entry['email']}> | CC: {entry['coach']}"
-            )
-            send_email_outlook(
-                to=entry["email"], cc=entry["coach"], subject=subject, html_body=html
-            )
+            entry_id = str(entry["id"]).strip()
+            if entry_id in sent_ids:
+                print(f"Skipping Id {entry_id} (already sent)")
+                continue
 
-            matching_rows = df[df[col_email] == entry["email"]]
-            if not matching_rows.empty:
-                excel_row = matching_rows.index[0]
-                column_location = df.columns.get_loc(col_send)
-                if isinstance(excel_row, int) and isinstance(column_location, int):
-                    ws.cell(row=excel_row + 2, column=column_location + 1).value = 1
+            try:
+                html = EMAIL_TEMPLATE.format(
+                    name=entry["name"], generated_section=entry["llm_output"]
+                )
+                print(f"Sending to {entry['name']} <{entry['email']}> | CC: {entry['coach']}")
+                send_email_outlook(
+                    to=entry["email"],
+                    cc=entry["coach"],
+                    subject=subject,
+                    html_body=html
+                )
+                append_to_sent_log(entry_id, "Success", path=LOG_PATH)
 
-        wb.save(temp_survey_path)
-        shutil.move(temp_survey_path, survey_path)
-        print("All emails sent and Excel updated.")
+            except Exception as e:
+                print(f"Failed to send email to Id {entry_id}: {e}")
+                append_to_sent_log(entry_id, f"Failed: {str(e)}", path=LOG_PATH)
+
+        print("All emails processed and log updated.")
 
     except ValueError as e:
         print(f"\nMissing required column in survey file: {e}")
@@ -123,10 +113,6 @@ def send_all_emails():
     except Exception as e:
         print(f"\nAn unexpected error occurred: {e}")
         input("Press Enter to return to the menu...")
-    finally:
-        if os.path.exists(temp_survey_path):
-            os.remove(temp_survey_path)
-
 
 if __name__ == "__main__":
     send_all_emails()

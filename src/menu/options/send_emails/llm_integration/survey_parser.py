@@ -8,19 +8,24 @@ def find_column(df, keyword: str) -> str:
     raise ValueError(f"Could not find column with keyword: '{keyword}'")
 
 
-def get_entries_for_unsent(df: pd.DataFrame) -> list[dict]:
+def get_entries_for_unsent(df: pd.DataFrame, sent_ids: set) -> list[dict]:
     col_interest = find_column(df, "upskilling")
     col_motivation = find_column(df, "future training programs")
     col_enrolled = find_column(df, "next period")
     col_email = find_column(df, "email")
     col_name = find_column(df, "name")
-    col_status = find_column(df, "send email")
     col_coach = find_column(df, "career coach")
+    col_id = find_column(df, "Id")
 
     entries = []
 
-    for _, row in df[df[col_status] != 1].iterrows():
+    for _, row in df.iterrows():
+        entry_id = str(row[col_id]).strip()
+        if entry_id in sent_ids:
+            continue  # skip if already sent
+
         entry = {
+            "id": entry_id,
             "name": str(row[col_name]).strip(),
             "email": str(row[col_email]).strip(),
             "career_coach": str(row[col_coach]).strip(),
@@ -31,3 +36,4 @@ def get_entries_for_unsent(df: pd.DataFrame) -> list[dict]:
         entries.append(entry)
 
     return entries
+
