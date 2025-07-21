@@ -16,7 +16,7 @@ def generate_llm_outputs(df) -> list[dict]:
     results = []
     for entry in entries:
         prompt = build_prompt(entry["r1"], entry["r2"], entry["r3"])
-        text, _ = llm.run(prompt)
+        text = llm.run(prompt)
         results.append(
             {
                 "name": entry["name"],

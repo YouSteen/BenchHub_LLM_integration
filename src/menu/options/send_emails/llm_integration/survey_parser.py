@@ -19,7 +19,7 @@ def get_entries_for_unsent(df: pd.DataFrame) -> list[dict]:
 
     entries = []
 
-    for _, row in df[df[col_status] == 0].iterrows():
+    for _, row in df[df[col_status] != 1].iterrows():
         entry = {
             "name": str(row[col_name]).strip(),
             "email": str(row[col_email]).strip(),
