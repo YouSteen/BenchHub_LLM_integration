@@ -1,4 +1,5 @@
 import os
+import shutil
 import pandas as pd
 import win32com.client as win32
 from openpyxl import load_workbook
@@ -52,8 +53,25 @@ def send_all_emails():
         input("Press Enter to return to the menu...")
         return
 
+    temp_survey_path = "temp_survey.xlsx"
     try:
-        df = pd.read_excel(survey_path)
+        shutil.copy(survey_path, temp_survey_path)
+    except (FileNotFoundError, PermissionError):
+        print(
+            "\nPermission denied or file not found. Please check the survey path and ensure the file is not open elsewhere."
+        )
+        input("Press Enter to return to the menu...")
+        return
+    except Exception as e:
+        print(f"\nError copying survey file: {e}")
+        input("Press Enter to return to the menu...")
+        return
+
+    try:
+        df = pd.read_excel(temp_survey_path)
+        wb = load_workbook(temp_survey_path)
+        ws = wb.active
+
         required_keywords = [
             "upskilling",
             "future training programs",
@@ -65,54 +83,49 @@ def send_all_emails():
         ]
         for keyword in required_keywords:
             find_column(df, keyword)
-    except PermissionError:
-        print("\nPermission denied. Please close the Excel file before proceeding.")
-        input("Press Enter to return to the menu...")
-        return
+
+        if ws is None:
+            raise ValueError("No active worksheet found in the Excel file.")
+
+        col_send = find_column(df, "send email")
+        col_email = find_column(df, "email")
+        responses = generate_llm_outputs(df)
+
+        for entry in responses:
+            html = EMAIL_TEMPLATE.format(
+                name=entry["name"], generated_section=entry["llm_output"]
+            )
+            print(
+                f"Sending to {entry['name']} <{entry['email']}> | CC: {entry['coach']}"
+            )
+            send_email_outlook(
+                to=entry["email"], cc=entry["coach"], subject=subject, html_body=html
+            )
+
+            matching_rows = df[df[col_email] == entry["email"]]
+            if not matching_rows.empty:
+                excel_row = matching_rows.index[0]
+                column_location = df.columns.get_loc(col_send)
+                if isinstance(excel_row, int) and isinstance(column_location, int):
+                    ws.cell(row=excel_row + 2, column=column_location + 1).value = 1
+
+        wb.save(temp_survey_path)
+        shutil.move(temp_survey_path, survey_path)
+        print("All emails sent and Excel updated.")
+
     except ValueError as e:
-        print(f"\nMissing required column: {e}")
+        print(f"\nMissing required column in survey file: {e}")
         input("Press Enter to return to the menu...")
-        return
-
-    wb = load_workbook(survey_path)
-    ws = wb.active
-
-    if ws is None:
-        raise ValueError("No active worksheet found in the Excel file.")
-
-    col_send = find_column(df, "send email")
-    col_email = find_column(df, "email")
-
-    responses = generate_llm_outputs(df)
-
-    for idx, entry in enumerate(responses):
-        name = entry["name"]
-        email = entry["email"]
-        coach = entry["coach"]
-        body = entry["llm_output"]
-
-        html = EMAIL_TEMPLATE.format(name=name, generated_section=body)
-
-        print(f"Sending to {name} <{email}> | CC: {coach}")
-        send_email_outlook(to=email, cc=coach, subject=subject, html_body=html)
-
-        matching_rows = df[df[col_email] == email]
-        if not matching_rows.empty:
-            excel_row = matching_rows.index[0]
-            column_location = df.columns.get_loc(col_send)
-            if isinstance(excel_row, int) and isinstance(column_location, int):
-                ws.cell(row=excel_row + 2, column=column_location + 1).value = 1
-
-    try:
-        wb.save(survey_path)
     except PermissionError:
-        print(
-            "\nPermission denied. Could not save the Excel file. Please close it and try again."
-        )
+        print("\nPermission denied. The survey file is likely open elsewhere.")
+        print("Please close the file and try again.")
         input("Press Enter to return to the menu...")
-        return
-
-    print("All emails sent and Excel updated.")
+    except Exception as e:
+        print(f"\nAn unexpected error occurred: {e}")
+        input("Press Enter to return to the menu...")
+    finally:
+        if os.path.exists(temp_survey_path):
+            os.remove(temp_survey_path)
 
 
 if __name__ == "__main__":
