@@ -18,7 +18,7 @@ REQUIRED_COLUMNS = [
     "Would you be open to sharing your expertise by leading training sessions within your field of knowledge?\n",
     "Would you be interested in joining Keystone MarketPlace Romania in the future?\nhttps://confluence.endava.com/spaces/CTO/pages/577044538/KMP+in+Romania",
     "Do you feel you have enough information or clarity regarding your next steps during bench period?\n",
-    "Send Email?",
+    "Send Email",
 ]
 
 

@@ -32,3 +32,15 @@ def save_config(config):
     """Save the current config to the file."""
     with open(get_config_path(), "w") as f:
         config.write(f)
+
+
+def get_llm_path():
+    """Get the LLM model path from the config."""
+    config = load_config()
+    return config.get("Paths", "llm_model_path")
+
+
+def get_survey_path():
+    """Get the survey file path from the config."""
+    config = load_config()
+    return config.get("Paths", "survey_path")

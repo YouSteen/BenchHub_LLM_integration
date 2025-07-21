@@ -57,8 +57,8 @@ def load_survey_df(EXCEL_PATH):
 
 
 def get_unsent_people(df):
-    """Return a DataFrame of people who have not been sent an email (Send Email? != 1)."""
-    return df[df["Send Email?"] != 1]
+    """Return a DataFrame of people who have not been sent an email (Send Email != 1)."""
+    return df[df["Send Email"] != 1]
 
 
 def get_id_name_email(df):

@@ -24,6 +24,7 @@ PySide6_Addons==6.9.1
 PySide6_Essentials==6.9.1
 python-dateutil==2.9.0.post0
 pytz==2025.2
+pywin32==311
 pywin32-ctypes==0.2.3
 requests==2.32.4
 setuptools==80.9.0
