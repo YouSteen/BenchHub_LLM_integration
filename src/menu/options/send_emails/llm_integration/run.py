@@ -6,8 +6,8 @@ from menu.options.send_emails.llm_integration.survey_parser import (
 from menu.utils.config_manager import get_llm_path
 
 
-def generate_llm_outputs(xlsx_path: str) -> list[dict]:
-    entries = get_entries_for_unsent(xlsx_path)
+def generate_llm_outputs(df) -> list[dict]:
+    entries = get_entries_for_unsent(df)
     llm_path = get_llm_path()
     if not llm_path:
         raise ValueError("LLM model path is not configured.")

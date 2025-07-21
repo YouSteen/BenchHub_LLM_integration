@@ -5,6 +5,7 @@ from openpyxl import load_workbook
 
 from menu.options.send_emails.llm_integration.run import generate_llm_outputs
 from menu.utils.config_manager import get_survey_path, get_llm_path
+from menu.options.send_emails.llm_integration.survey_parser import find_column
 
 # === CONFIG ===
 subject = "Your Development Plan – Personalized Suggestions"
@@ -46,39 +47,30 @@ def send_all_emails():
         input("Press Enter to return to the menu...")
         return
 
-    # Check LLM model size (must be > 4GB)
     if os.path.getsize(llm_model_path) < 4 * 1024 * 1024 * 1024:
         print("LLM model file is smaller than 4GB. Please select a valid model.")
         input("Press Enter to return to the menu...")
         return
 
-    # Check for necessary columns in the survey file
-    df = pd.read_excel(survey_path)
-    required_columns = [
-        "Id",
-        "Start time",
-        "Completion time",
-        "Email",
-        "Name",
-        "Please choose the office location you are assigned to.\n",
-        "Please provide your Career Coach's email address in the space below.\n",
-        "Which areas of upskilling are you most interested in? (You can select multiple options)\n",
-        "Are you currently engaged in any training, certifications, or testing activities?\n",
-        "If yes, please specify the type of training or certification you're currently engaged with.\n",
-        "Are there any specific topics or skills you would like to focus on in future training programs?\n",
-        "Are you available to actively participate in testing communities and contribute to different activities that support their growth and development?\n",
-        "Would you be open to sharing your expertise by leading training sessions within your field of knowledge?\n",
-        "Would you be interested in joining Keystone MarketPlace Romania in the future?\nhttps://confluence.endava.com/spaces/CTO/pages/577044538/KMP+in+Romania",
-        "Do you feel you have enough information or clarity regarding your next steps during bench period?\n",
-        "Send Email",
-    ]
-
-    missing_columns = [col for col in required_columns if col not in df.columns]
-
-    if missing_columns:
-        print(
-            f"The survey file is missing the following required columns: {', '.join(missing_columns)}"
-        )
+    try:
+        df = pd.read_excel(survey_path)
+        required_keywords = [
+            "upskilling",
+            "future training programs",
+            "next period",
+            "email",
+            "name",
+            "send email",
+            "career coach",
+        ]
+        for keyword in required_keywords:
+            find_column(df, keyword)
+    except PermissionError:
+        print("\nPermission denied. Please close the Excel file before proceeding.")
+        input("Press Enter to return to the menu...")
+        return
+    except ValueError as e:
+        print(f"\nMissing required column: {e}")
         input("Press Enter to return to the menu...")
         return
 
@@ -88,10 +80,10 @@ def send_all_emails():
     if ws is None:
         raise ValueError("No active worksheet found in the Excel file.")
 
-    col_send = [c for c in df.columns if "send email" in c.lower()][0]
-    col_email = [c for c in df.columns if "email" in c.lower()][0]
+    col_send = find_column(df, "send email")
+    col_email = find_column(df, "email")
 
-    responses = generate_llm_outputs(survey_path)
+    responses = generate_llm_outputs(df)
 
     for idx, entry in enumerate(responses):
         name = entry["name"]
@@ -111,7 +103,15 @@ def send_all_emails():
             if isinstance(excel_row, int) and isinstance(column_location, int):
                 ws.cell(row=excel_row + 2, column=column_location + 1).value = 1
 
-    wb.save(survey_path)
+    try:
+        wb.save(survey_path)
+    except PermissionError:
+        print(
+            "\nPermission denied. Could not save the Excel file. Please close it and try again."
+        )
+        input("Press Enter to return to the menu...")
+        return
+
     print("All emails sent and Excel updated.")
 
 
