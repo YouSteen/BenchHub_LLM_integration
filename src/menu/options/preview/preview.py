@@ -1,93 +1,53 @@
 from pathlib import Path
+from .utils import (
+    load_survey_df,
+    get_unsent_people,
+    get_id_name_email,
+    display_people_table,
+)
+from menu.utils.config_manager import load_config, get_config_path
 import os
-import sys
-import pandas as pd
-from tabulate import tabulate
-import msvcrt
-
-EXCEL_PATH = Path("C:/Users/nsincaru/OneDrive - ENDAVA/Iustin-Mihai Stanciu's files - Survey") / "BenchHub_Engagement & Upskilling Survey.xlsx"
-
-def clear_terminal():
-    os.system('cls' if os.name == 'nt' else 'clear')
-
-def get_excel_df():
-    try:
-        df = pd.read_excel(EXCEL_PATH)
-        return df
-    except Exception as e:
-        print(f"Error reading Excel file: {e}")
-        input("Press Enter to return to the preview menu...")
-        return None
-
-def truncate(val, width=40):
-    val = str(val)
-    return val if len(val) <= width else val[:width - 3] + "..."
-
-def show_where_left_off():
-    df = get_excel_df()
-    if df is None:
-        return
-    unsent = df[df['Send Email'].astype(str).str.lower() == 'no']
-    if not unsent.empty:
-        print("You left off at:\n")
-        row = unsent.head(1).transpose()
-        row.columns = ['Next Person']
-        row = row.applymap(lambda x: truncate(x, 40))
-        print(tabulate(row, headers="keys", tablefmt="grid", showindex=True))
-    else:
-        print("All emails have been sent!")
-    input("\nPress Enter to return to the preview menu...")
-
-def show_missed():
-    df = get_excel_df()
-    if df is None:
-        return
-    unsent = df[df['Send Email'].astype(str).str.lower() == 'no']
-    if not unsent.empty:
-        print(f"Missed {len(unsent)} recipients:\n")
-        df_clean = unsent.transpose()
-        df_clean.columns = [f"Person {i+1}" for i in range(len(df_clean.columns))]
-        df_clean = df_clean.applymap(lambda x: truncate(x, 40))
-        print(tabulate(df_clean, headers="keys", tablefmt="grid", showindex=True))
-    else:
-        print("No missed recipients!")
-    input("\nPress Enter to return to the preview menu...")
-
-def load_survey_df():
-    """Load the survey Excel file as a DataFrame."""
-    return get_excel_df()
-
-
-def get_unsent_people(df):
-    """Return a DataFrame of people who have not been sent an email (Send Email? != 1)."""
-    return df[df['Send Email?'] != 1]
-
-
-def get_id_name_email(df):
-    """Return only the Id, Email, and Name columns from the DataFrame, if present."""
-    cols = [col for col in df.columns if col.lower() in ['id', 'name', 'email']]
-    return df[cols]
-
-
-def display_people_table(df):
-    """Display the table of people in a readable format."""
-    if df.empty:
-        print("All emails have been sent!")
-    else:
-        print(tabulate(df, headers='keys', tablefmt='grid', showindex=False))
 
 
 def preview_file():
-    df = load_survey_df()
-    if df is None:
-        return
-    clear_terminal()
-    print(f"Loaded: {EXCEL_PATH}\n")
+    from menu.handler import main_menu
+
+    # Check config.ini existence
+    config_path = get_config_path()
+    if not os.path.exists(config_path):
+        print(
+            "Error: Configuration not found. Please configure paths from the configuration options menu first."
+        )
+        input("Press Enter to return to the main menu...")
+        return main_menu()
+
+    config = load_config()
+    excel_path = config["Paths"].get("survey_path", "")
+
+    # Check Excel path
+    if not excel_path or not os.path.exists(excel_path):
+        print(
+            "Error: Survey Excel file path is not set or file does not exist. Please configure it from the configuration options menu."
+        )
+        input("Press Enter to return to the main menu...")
+        return main_menu()
+
+    df = load_survey_df(excel_path)
+    if df is None or df.empty:
+        print(
+            "Error: Survey Excel file is empty or could not be loaded. Please check the file and configure it from the configuration options menu."
+        )
+        input("Press Enter to return to the main menu...")
+        return main_menu()
+
+    print(f"Loaded: {excel_path}\n")
     filtered = get_unsent_people(df)
     filtered = get_id_name_email(filtered)
     print("\nPeople who have NOT been sent an email:\n")
     display_people_table(filtered)
     input("\nPress Enter to return to the main menu...")
+    main_menu()
+
 
 if __name__ == "__main__":
     preview_file()

@@ -24,8 +24,6 @@ cmd = [
     "../src/main.py",
     "--add-data",
     f"{lib_path}{sep}{target_path}",
-    "--add-data",
-    f"../assets/logo.png{sep}assets",
 ]
 
 print(f"""
