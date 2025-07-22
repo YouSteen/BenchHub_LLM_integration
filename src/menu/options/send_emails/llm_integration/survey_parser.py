@@ -18,7 +18,6 @@ def get_entries_for_unsent(df: pd.DataFrame, sent_ids: set) -> list[dict]:
     col_id = find_column(df, "Id")
 
     entries = []
-
     for _, row in df.iterrows():
         entry_id = str(row[col_id]).strip()
         if entry_id in sent_ids:
@@ -36,4 +35,3 @@ def get_entries_for_unsent(df: pd.DataFrame, sent_ids: set) -> list[dict]:
         entries.append(entry)
 
     return entries
-

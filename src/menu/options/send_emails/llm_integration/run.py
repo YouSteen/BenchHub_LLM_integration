@@ -7,9 +7,10 @@ from menu.utils.config_manager import get_llm_path
 
 
 def generate_llm_outputs(df) -> list[dict]:
-    sent_ids = load_sent_log("sent_log.xlsx")
+    sent_ids = load_sent_log("C:\\Users\\iustanciu\\OneDrive - ENDAVA\\Survey\\sent_log.xlsx")
     entries = get_entries_for_unsent(df, sent_ids)
-
+    # print(f"Found {len(entries)} entries to process.")
+    # print(entries)
     if not entries:
         print("No new entries to process. All IDs are already logged.")
         return []
