@@ -132,9 +132,9 @@ BenchHub_LLM_integration/
 
 ### 🛠 Additional Setup
 
-- ✅ [ ] Download a Mistral model (e.g. [`mistral-7b-instruct.Q4_K_M.gguf`](https://huggingface.co/TheBloke/Mistral-7B-Instruct-v0.2-GGUF))
-- ✅ [ ] Install [**C++ Build Tools**](https://visualstudio.microsoft.com/visual-cpp-build-tools/) (required by `llama.cpp` backend)
-- ✅ [ ] Setup OneDrive sync on local machine
+- Download a Mistral model (e.g. [`mistral-7b-instruct.Q4_K_M.gguf`](https://huggingface.co/TheBloke/Mistral-7B-Instruct-v0.2-GGUF))
+- Install [**C++ Build Tools**](https://visualstudio.microsoft.com/visual-cpp-build-tools/) (required by `llama.cpp` backend)
+- Setup OneDrive sync on local machine
 
 ---
 
