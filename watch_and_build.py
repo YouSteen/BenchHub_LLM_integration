@@ -56,9 +56,9 @@ def run_dev_server():
             print("Starting app: py src/main.py")
             app_process = subprocess.Popen(
                 ["py", "src/main.py"],
-                creationflags=subprocess.CREATE_NEW_PROCESS_GROUP
-                if os.name == "nt"
-                else 0,
+                creationflags=(
+                    subprocess.CREATE_NEW_PROCESS_GROUP if os.name == "nt" else 0
+                ),
             )
 
     observer = Observer()

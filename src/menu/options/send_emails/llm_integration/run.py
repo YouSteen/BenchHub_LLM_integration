@@ -1,13 +1,17 @@
 from llm_core.inference import LLMRunner
 from menu.options.send_emails.llm_integration.prompt_builder import build_prompt
-from menu.options.send_emails.llm_integration.survey_parser import get_entries_for_unsent
+from menu.options.send_emails.llm_integration.survey_parser import (
+    get_entries_for_unsent,
+)
 from menu.options.send_emails.llm_integration.sent_log import load_sent_log
 
 from menu.utils.config_manager import get_llm_path
 
 
 def generate_llm_outputs(df) -> list[dict]:
-    sent_ids = load_sent_log("C:\\Users\\iustanciu\\OneDrive - ENDAVA\\Survey\\sent_log.xlsx")
+    sent_ids = load_sent_log(
+        "C:\\Users\\iustanciu\\OneDrive - ENDAVA\\Survey\\sent_log.xlsx"
+    )
     entries = get_entries_for_unsent(df, sent_ids)
     # print(f"Found {len(entries)} entries to process.")
     # print(entries)
@@ -36,4 +40,3 @@ def generate_llm_outputs(df) -> list[dict]:
         )
 
     return results
-

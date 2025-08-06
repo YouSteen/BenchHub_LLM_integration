@@ -1,5 +1,4 @@
 import os
-import configparser
 
 APP_NAME = "BenchHubLLM"
 CONFIG_FILENAME = "config.ini"

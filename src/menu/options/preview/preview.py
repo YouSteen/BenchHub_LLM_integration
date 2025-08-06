@@ -1,4 +1,3 @@
-from pathlib import Path
 from .utils import (
     load_survey_df,
     get_unsent_people,
@@ -20,9 +19,7 @@ REQUIRED_COLUMNS = [
     "Are you currently engaged in any training, certifications, or testing activities?\n",
     "If yes, please specify the type of training or certification you're currently engaged with.\n",
     "Are there any specific topics or skills you would like to focus on in future training programs?\n",
-    "Are you available to actively participate in testing communities and contribute to different activities that support their growth and development?\n",
     "Would you be open to sharing your expertise by leading training sessions within your field of knowledge?\n",
-    "Would you be interested in joining Keystone MarketPlace Romania in the future?\nhttps://confluence.endava.com/spaces/CTO/pages/577044538/KMP+in+Romania",
     "Do you feel you have enough information or clarity regarding your next steps during bench period?\n",
     "Send Email",
 ]
@@ -46,7 +43,8 @@ def preview_file():
     # Check Excel path
     if not excel_path or not os.path.exists(excel_path):
         print(
-            "Error: Survey Excel file path is not set or file does not exist. Please configure it from the configuration options menu."
+            "Error: Survey Excel file path is not set or file does not exist."
+            " Please configure it from the configuration options menu."
         )
         input("Press Enter to return to the main menu...")
         return main_menu()
@@ -54,7 +52,8 @@ def preview_file():
     df = load_survey_df(excel_path)
     if df is None or df.empty:
         print(
-            "Error: Survey Excel file is empty or could not be loaded. Please check the file and configure it from the configuration options menu."
+            "Error: Survey Excel file is empty or could not be loaded."
+            " Please check the file and configure it from the configuration options menu."
         )
         input("Press Enter to return to the main menu...")
         return main_menu()

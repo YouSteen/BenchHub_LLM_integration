@@ -14,9 +14,11 @@ REQUIRED_COLUMNS = [
     "Are you currently engaged in any training, certifications, or testing activities?\n",
     "If yes, please specify the type of training or certification you're currently engaged with.\n",
     "Are there any specific topics or skills you would like to focus on in future training programs?\n",
-    "Are you available to actively participate in testing communities and contribute to different activities that support their growth and development?\n",
     "Would you be open to sharing your expertise by leading training sessions within your field of knowledge?\n",
-    "Would you be interested in joining Keystone MarketPlace Romania in the future?\nhttps://confluence.endava.com/spaces/CTO/pages/577044538/KMP+in+Romania",
+    (
+        "Would you be interested in joining Keystone MarketPlace Romania in the future?\n"
+        "https://confluence.endava.com/spaces/CTO/pages/577044538/KMP+in+Romania"
+    ),
     "Do you feel you have enough information or clarity regarding your next steps during bench period?\n",
     "Send Email",
 ]
@@ -51,7 +53,7 @@ def set_survey_path():
         config = load_config()
         config["Paths"]["survey_path"] = path
         save_config(config)
-        print(f"Survey path saved to config.ini.")
+        print("Survey path saved to config.ini.")
     else:
         print("No file selected.")
     input("Press Enter to return to the configuration menu...")

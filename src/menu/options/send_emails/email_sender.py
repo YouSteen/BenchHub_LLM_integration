@@ -7,7 +7,7 @@ from menu.utils.config_manager import get_survey_path, get_llm_path
 from menu.options.send_emails.llm_integration.survey_parser import find_column
 from menu.options.send_emails.llm_integration.sent_log import (
     load_sent_log,
-    append_to_sent_log
+    append_to_sent_log,
 )
 
 # === CONFIG ===
@@ -18,13 +18,17 @@ EMAIL_TEMPLATE = """
 <html>
 <body>
 <p>Hello <b>{name}</b>,</p>
-<p>Thank you for completing the form! I’d like to share some valuable information to support your upskilling and certification journey.</p>
+<p>Thank you for completing the form! I’d like to share some valuable information to support your
+upskilling and certification journey.</p>
 {generated_section}
-<p>These resources will help you develop your skills in the fields you’re most passionate about. Feel free to explore the available materials, and don’t hesitate to reach out to Local Community Leads if you have any questions or need further support.</p>
+<p>These resources will help you develop your skills in the fields you’re most
+passionate about. Feel free to explore the available materials, and don’t hesitate to reach out to Local
+Community Leads if you have any questions or need further support.</p>
 <p style="margin-top: 20px;"><b>Romania Testing Technical Communities: Collaboration & Knowledge Hub</b></p>
 </body>
 </html>
 """
+
 
 def send_email_outlook(to: str, cc: str, subject: str, html_body: str):
     outlook = win32.Dispatch("Outlook.Application")
@@ -34,6 +38,7 @@ def send_email_outlook(to: str, cc: str, subject: str, html_body: str):
     mail.Subject = subject
     mail.HTMLBody = html_body
     mail.Send()
+
 
 def send_all_emails():
     survey_path = get_survey_path()
@@ -64,12 +69,11 @@ def send_all_emails():
             "email",
             "name",
             "career coach",
-            "id"
+            "id",
         ]
         for keyword in required_keywords:
             find_column(df, keyword)
 
-        col_id = find_column(df, "id")
         sent_ids = load_sent_log(LOG_PATH)
         responses = generate_llm_outputs(df)
 
@@ -88,12 +92,14 @@ def send_all_emails():
                 html = EMAIL_TEMPLATE.format(
                     name=entry["name"], generated_section=entry["llm_output"]
                 )
-                print(f"Sending to {entry['name']} <{entry['email']}> | CC: {entry['coach']}")
+                print(
+                    f"Sending to {entry['name']} <{entry['email']}> | CC: {entry['coach']}"
+                )
                 send_email_outlook(
                     to=entry["email"],
                     cc=entry["coach"],
                     subject=subject,
-                    html_body=html
+                    html_body=html,
                 )
                 append_to_sent_log(entry_id, "Success", path=LOG_PATH)
 
@@ -113,6 +119,7 @@ def send_all_emails():
     except Exception as e:
         print(f"\nAn unexpected error occurred: {e}")
         input("Press Enter to return to the menu...")
+
 
 if __name__ == "__main__":
     send_all_emails()

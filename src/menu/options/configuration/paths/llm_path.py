@@ -23,7 +23,7 @@ def set_llm_model_path():
         config = load_config()
         config["Paths"]["llm_model_path"] = path
         save_config(config)
-        print(f"LLM model path saved to config.ini.")
+        print("LLM model path saved to config.ini.")
     else:
         print("No file selected.")
     input("Press Enter to return to the configuration menu...")

@@ -1,6 +1,5 @@
 import msvcrt
 from menu.utils.logo import get_logo
-import os
 
 
 def menu_builder(title, menu_items, header=None):

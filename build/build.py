@@ -2,7 +2,6 @@ from distutils.sysconfig import get_python_lib
 import subprocess
 from pathlib import Path
 import os
-import shutil
 
 site_packages = get_python_lib()
 lib_path = Path(site_packages) / "llama_cpp" / "lib"
