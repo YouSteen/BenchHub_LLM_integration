@@ -149,6 +149,9 @@ BenchHub_LLM_integration/
 ## 🙌 Contributors
 
 - **Iustin-Mihai Stanciu** – Author, developer, integrator
+- **Sincaru Nicola-Diana** – Author, developer, integrator
+- **Vataselu Andrei** – Author, developer, integrator
+  
 - 🧪 Inspired by real-world upskilling flows at **Endava**
 
 ---
