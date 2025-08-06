@@ -35,3 +35,6 @@ token_cache.json
 
 # Custom lib data (if llama_cpp is downloaded into site-packages)
 llama_cpp/
+
+sent_log.xlsx
+localapp
