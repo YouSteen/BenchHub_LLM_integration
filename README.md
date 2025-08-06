@@ -108,13 +108,16 @@ Each email (sent or failed) is tracked in `sent_log.xlsx` with:
 ```
 BenchHub_LLM_integration/
 ├── build/               # Build artifacts
+├── flow/                # Visual documentation (screenshots)
+│   ├── survey.png
+│   ├── excel.png
+│   ├── ui.png
+│   ├── email.png
+│   └── sent_log.png
 ├── scripts/             # .bat setup and launch scripts
 ├── src/                 # Source code
-│   ├── llm_core/        # LLM handling and prompt logic
-│   ├── menu/            # UI options (send, preview, config, exit)
+│   ├── menu/            # UI options (send, preview, config, exit), LLM handling and prompt logic
 │   └── utils/           # File handling, Excel parsing, email logic
-├── docs/
-│   └── flow/            # Screenshots for flow guide
 ├── requirements.txt     # Python dependencies
 ├── watch_and_build.py   # Dev environment runner
 └── README.md            # You're here :)
@@ -148,11 +151,9 @@ BenchHub_LLM_integration/
 
 ## 🙌 Contributors
 
-- **Iustin-Mihai Stanciu** – Author, developer, integrator
+- **Iustin-Mihai Stanciu**
+- **Nicola-Diana Sincaru**
+- **Andrei Vataselu**
 - 🧪 Inspired by real-world upskilling flows at **Endava**
 
 ---
-
-## 📄 License
-
-MIT License. Free to use, extend, and improve.
