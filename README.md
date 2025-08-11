@@ -3,7 +3,7 @@
 This project automates the generation of personalized development suggestion emails based on Microsoft Forms survey responses. It integrates a local **Mistral LLM**, **OneDrive file sync**, and **Outlook email automation** to create a seamless upskilling workflow.
 
 
-It also serves as an automated workflow for proactively supporting bench employees at Endava, by providing tailored development recommendations based on individual survey inputs. Designed as part of an internal innovation challenge, the project encourages continuous learning and engagement during periods without client allocation.
+It also serves as an automated workflow for proactively supporting bench employees from Testing Discipline at Endava, by providing tailored development recommendations based on individual survey inputs. Designed as part of an internal innovation challenge, the project encourages continuous learning and engagement during periods without client allocation.
 
 ---
 
